@@ -1,36 +1,72 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Nutri Web
 
-## Getting Started
+A single-user Next.js 16 dashboard for tracking nutrition alongside the Telegram bot. Shares the same Postgres `nutri` schema.
 
-First, run the development server:
+## Features
+
+- **Dashboard** — today's kcal vs target, per-meal progress cards, 7-day bar chart, streak badge
+- **Meals** — list with date/type filters, inline item editor with ingredient autocomplete, delete with confirmation
+- **Ingredients** — searchable table with inline edit, new ingredient form, alias management
+- **Objetivos** — edit `meal_goals` per meal type with history timeline
+- **Análises** — 30-day heatmap, stacked bar chart by meal, top 10 ingredients by frequency and kcal
+
+## Setup
 
 ```bash
+cp .env.example .env.local
+# edit .env.local with real values
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Environment variables
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Variable | Description |
+|---|---|
+| `DATABASE_URL` | `postgres://nutri_web:pass@host:5432/nutri` |
+| `AUTH_USER` | Login username |
+| `AUTH_PASSWORD` | Login password |
+| `SESSION_SECRET` | Random string ≥ 32 chars for iron-session |
+| `TZ` | `Europe/Lisbon` (recommended) |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Database user
 
-## Learn More
+Create a dedicated DB user with DML-only access:
 
-To learn more about Next.js, take a look at the following resources:
+```sql
+CREATE USER nutri_web WITH PASSWORD 'your_password';
+GRANT USAGE ON SCHEMA nutri TO nutri_web;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA nutri TO nutri_web;
+ALTER DEFAULT PRIVILEGES IN SCHEMA nutri GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO nutri_web;
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Docker deployment
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+# build and start next to n8n
+docker compose up -d --build nutri-web
+```
 
-## Deploy on Vercel
+`docker-compose.yml` fragment:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```yaml
+services:
+  nutri-web:
+    build: ./web
+    env_file: ./web/.env
+    networks: [n8n_default]
+    restart: unless-stopped
+    labels:
+      caddy: nutri.joaodomingos.com
+      caddy.reverse_proxy: "{{upstreams 3000}}"
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Tech stack
+
+- **Next.js 16** (App Router, React Server Components, Server Actions)
+- **Tailwind CSS** + **shadcn/ui** + **lucide-react**
+- **Recharts** for charts
+- **Drizzle ORM** + **node-postgres** (read schema only, no migrations)
+- **iron-session** for encrypted cookie auth
+- **zod** for validation
+- **date-fns** for date math
