@@ -24,8 +24,8 @@ export async function createMeal(formData: FormData) {
   const client = await pool.connect();
   try {
     const { rows } = await client.query(
-      `INSERT INTO nutri.meals (date, meal_type, notes)
-       VALUES ($1, $2, $3) RETURNING id`,
+      `INSERT INTO nutri.meals (chat_id, date, meal_type, notes)
+       VALUES (5264099446, $1, $2, $3) RETURNING id`,
       [parsed.meal_date, parsed.meal_type, parsed.notes ?? null]
     );
     revalidatePath("/meals");
